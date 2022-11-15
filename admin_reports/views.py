@@ -42,9 +42,9 @@ class ReportList(object):
         self.can_show_all = True
         self.paginator = None  # self.report.get_paginator()
         try:
-            self.page_num = int(self.request.GET.get(PAGE_VAR, 0))
+            self.page_num = int(self.request.GET.get(PAGE_VAR, 1))
         except ValueError:
-            self.page_num = 0
+            self.page_num = 1
         self.show_all = ALL_VAR in self.request.GET
 
     def get_query_string(self, new_params=None, remove=None):
@@ -202,7 +202,7 @@ class ReportList(object):
         self.can_show_all = result_count <= self.report.get_list_max_show_all()
         if not (self.show_all and self.can_show_all) and self.multi_page:
             try:
-                records = self.paginator.page(self.page_num + 1).object_list
+                records = self.paginator.page(self.page_num).object_list
             except InvalidPage:
                 raise IncorrectLookupParameters
         return records
