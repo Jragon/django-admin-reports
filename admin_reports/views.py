@@ -228,13 +228,15 @@ class Opts(object):
 
 
 class ReportView(TemplateView, FormMixin):
-
     report_class = None
+    site = None
 
-    def __init__(self, report_class, *args, **kwargs):
+    def __init__(self, report_class, *args, site=None, **kwargs):
         super(ReportView, self).__init__(*args, **kwargs)
         self.report_class = report_class
         self.report = None
+        self.site = site
+        self.request = None
 
     def get_initial(self):
         initial = super(ReportView, self).get_initial()
@@ -292,6 +294,7 @@ class ReportView(TemplateView, FormMixin):
         return report_class(*self.get_report_args(), **self.get_report_kwargs())
 
     def post(self, request, *args, **kwargs):
+        self.request = request
         self.report = self.get_report()
         if not self.report.has_permission(self.request):
             raise PermissionDenied()
@@ -306,6 +309,7 @@ class ReportView(TemplateView, FormMixin):
         return self._export(form=form)
 
     def get(self, request, *args, **kwargs):
+        self.request = request
         self.report = self.get_report()
         if not self.report.has_permission(request):
             raise PermissionDenied()
@@ -335,6 +339,12 @@ class ReportView(TemplateView, FormMixin):
     def get_form_class(self):
         return self.report_class.form_class
 
+    def get_extra_context(self):
+        if self.site is not None and self.request is not None:
+            return self.site.each_context(self.request)
+
+        return dict()
+
     def get_context_data(self, **kwargs):
         kwargs = super(ReportView, self).get_context_data(**kwargs)
         kwargs["media"] = self.media
@@ -346,6 +356,7 @@ class ReportView(TemplateView, FormMixin):
         rl = ReportList(self.request, self.report)
         kwargs.update(
             {
+                "has_permission": True,
                 "rl": rl,
                 "opts": Opts(self.report),
                 "title": self.report.get_title(),
@@ -361,6 +372,7 @@ class ReportView(TemplateView, FormMixin):
                 ),
             }
         )
+        kwargs.update(self.get_extra_context())
         return kwargs
 
     def get_template_names(self):
